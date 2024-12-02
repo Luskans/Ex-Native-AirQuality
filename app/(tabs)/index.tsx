@@ -15,13 +15,13 @@ export default function IndexScreen() {
         // />
         <Text className="text-white text-center m-auto text-3xl font-bold">Air Quality</Text>
       }>
-      <Box className="bg-green-500 h-[200px] w-full rounded-xl flex flex-col justify-center items-center gap-4">
+      {/* <Box className="bg-green-500 h-[200px] w-full rounded-xl flex flex-col justify-center items-center gap-4">
         <Text className="text-white text-3xl font-bold">Score: 28</Text>
         <Box className='flex flex-col justify-center items-center gap-2'>
           <Text className="text-white text-xl">Roanne, France</Text>
           <Text className="text-white text-md">12 février 2025</Text>
         </Box>
-      </Box>
+      </Box> */}
 
       <Box>
         <Score />

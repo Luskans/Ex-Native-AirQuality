@@ -1,40 +1,50 @@
 import React, { useEffect, useState } from 'react';
 import { View, Text, ActivityIndicator } from 'react-native';
-import Geolocation from 'react-native-geolocation-service';
-import { AQICN_KEY, AQICN_URL } from 'react-native-dotenv';
 import { Box } from '../ui/box';
+import * as Location from 'expo-location';
 
-const API_KEY = AQICN_KEY;
-const BASE_URL = AQICN_URL;
+const API_URL = process.env.EXPO_PUBLIC_AQICN_URL;
+const API_KEY = process.env.EXPO_PUBLIC_AQICN_KEY;
 
 const Score = () => {
+    const [location, setLocation] = useState<Location.LocationObject | null>(null);
     const [loading, setLoading] = useState(true);
     const [aqiData, setAqiData] = useState(null);
-    const [error, setError] = useState(null);
+    const [error, setError] = useState<String | null>(null);
 
     useEffect(() => {
-        Geolocation.getCurrentPosition(
-            position => {
-                fetchAirQuality(position.coords.latitude, position.coords.longitude);
-            },
-            error => {
-                setLoading(false);
-                setError('Erreur de localisation');
-            console.error(error);
-            },
-            { enableHighAccuracy: true, timeout: 15000, maximumAge: 10000 }
-        );
+        const getLocationAndFetchData = async () => {
+            await getCurrentLocation();
+            if (location) {
+                await fetchAirQuality(location.coords.latitude, location.coords.longitude);
+            }
+        };
+ 
+        getLocationAndFetchData();
     }, []);
 
-    const fetchAirQuality = async (latitude, longitude) => {
+    const getCurrentLocation = async (): Promise<object | void> => {
+        let { status } = await Location.requestForegroundPermissionsAsync();
+        if (status !== 'granted') {
+            setError('Permission to access location was denied');
+            setLoading(false);
+            return;
+        }
+
+        let location = await Location.getCurrentPositionAsync({});
+        setLocation(location);
+        setLoading(false);
+    }
+
+    const fetchAirQuality = async (latitude: number, longitude: number): Promise<void> => {
         try {
-            const response = await fetch(`${BASE_URL}${latitude};${longitude}/?token=${API_KEY}`);
+            const response = await fetch(`${API_URL}${latitude};${longitude}/?token=${API_KEY}`);
             const data = await response.json();
             if (data.status === 'ok') {
                 console.log(data.data);
                 setAqiData(data.data);
             } else {
-                setError('Erreur lors de la récupération des données');
+                setError(`Erreur lors de la récupération des données : ${data.message}`);
             }
         } catch (err) {
             console.error(err);
@@ -45,28 +55,22 @@ const Score = () => {
     };
 
     const getBackgroundColor = () => {
-        if (!aqiData) return '#fff';
+        if (!aqiData) return '#bfbfbf';
         const aqi = aqiData.aqi;
-        if (aqi < 200) return 'green';
-        if (aqi < 300) return 'yellow';
-        if (aqi < 400) return 'orange';
-        return 'red';
+        if (aqi < 200) return '#9bd996';
+        if (aqi < 300) return '#edea8a';
+        if (aqi < 400) return '#e6bc7e';
+        return '#e6837a';
     };
-
-    if (loading) {
-        return <ActivityIndicator size="large" color="#0000ff" />;
-    }
-
-    if (error) {
-        return <Text style={{ color: 'red' }}>{error}</Text>;
-    }
 
     return (
         <Box style={{ backgroundColor: getBackgroundColor() }} className='h-[200px] w-full rounded-xl flex flex-col justify-center items-center gap-4'>
-            <Text className="text-white text-3xl font-bold">Score: 28</Text>
+            {loading ?? <ActivityIndicator size="large" color="#d1d1d1" />}
+            {error != null ? <Text className='text-red-500'>{error}</Text> : ''}
+            <Text className="text-white text-3xl font-bold">Score: {aqiData?.aqi}</Text>
             <Box className='flex flex-col justify-center items-center gap-2'>
-                <Text className="text-white text-xl">Roanne, France</Text>
-                <Text className="text-white text-md">12 février 2025</Text>
+                <Text className="text-white text-xl">{aqiData?.city.name}</Text>
+                <Text className="text-white text-md">{aqiData?.time.s}</Text>
             </Box>
         </Box>
     );
